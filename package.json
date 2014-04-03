@@ -1,0 +1,15 @@
+{
+  "name": "langolier",
+  "version": "0.1.0",
+  "description": "A simple, queue-based ElasticSearch indexer",
+  "main": "langolier.js",
+  "dependencies": {
+    "aws-sdk": "2.0.x",
+    "elasticsearch": "2.1.x"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jamie Alquiza",
+  "license": "MIT"
+}
