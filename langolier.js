@@ -21,14 +21,30 @@ function writeLog(message, level) {
 // Create clients
 var clientEs = new elasticsearch.Client({
   host: settings.es.host + ':' + settings.es.port,
-  apiVersion: settings.es.apiVer,
-  //log: 'trace'
+  apiVersion: settings.es.apiVer
 });
-writeLog("Connected to ElasticSearch on " + settings.es.host + ':' + settings.es.port, "INFO")
+
+clientEs.ping({
+  requestTimeout: 1000,
+}, function (err) {
+  if (err) {
+    writeLog(err, "WARN");
+  }
+  else {
+    writeLog("Connected to ElasticSearch on " + settings.es.host + ':' + settings.es.port, "INFO");
+  };
+});
 
 function estabSqs() {
   clientSqs = new AWS.SQS({region: settings.aws.region});
-  writeLog("Listening for events on " + settings.aws.sqsUrl, "INFO");
+  clientSqs.getQueueAttributes({QueueUrl: settings.aws.sqsUrl}, function(err, data) {
+    if (err) {
+      writeLog(err, "WARN");
+    }
+    else {
+      writeLog("Listening for events on " + settings.aws.sqsUrl, "INFO");
+    };
+  });
 }
 estabSqs(); // Initial connection
 setInterval(estabSqs, 300000); // Refresh every 5 minutes to prevent AWS 15min timeout
@@ -46,7 +62,7 @@ function indexMsg(message, receipt) {
     else {
       delMsg(receipt); // Message isn't removed from queue unless indexing is successful 
       writeLog("Wrote to index: " + settings.index + " with type: " + message[0], "INFO");
-    }
+    };
   });
 };
 
