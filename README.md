@@ -26,11 +26,29 @@ curl -XPOST 'http://127.0.0.1:9200/metadata/some-type/' -d " { "TimeStamp": "201
 
 This allows any number of machines to push arbitrary data to a shared queue for organized storage.
 
+#### Watch it go
+
+Manually pushing message to SQS via AWS console:
+![ScreenShot](http://us-east.manta.joyent.com/jalquiza/public/github/langolier-1.png)
+
+Indexed under respective ElasticSearch type:
+![ScreenShot](http://us-east.manta.joyent.com/jalquiza/public/github/langolier-2.png)
+
+Search on fields via ElasticSearch dynamic mapping:
+![ScreenShot](http://us-east.manta.joyent.com/jalquiza/public/github/langolier-3.png)
+
+<pre>
+Fri Apr 04 2014 21:21:39 GMT+0000 (UTC) [INFO]: Connected to ElasticSearch on 10.0.1.35:9200
+Fri Apr 04 2014 21:21:54 GMT+0000 (UTC) [INFO]: Listening for events on https://sqs.us-west-2.amazonaws.com/xxx/langolier-xxxxxx
+Fri Apr 04 2014 21:21:54 GMT+0000 (UTC) [INFO]: Wrote to index: metadata with type: some-type
+</pre>
+
 #### Pending Updates
-+ Support Redis as an input queue. This feature is done, but not rolled in yet. Inputs will be modularized.
++ Additional / modularized input. E.g., Redis is done but not yet rolled in.
++ Multiple in / multiple out.
 + Better logging.
 + Startup options. E.g. verbose or 'to-console' logging.
-+ Node.js cluster usage (e.g. multiple indexing workers).
++ Node.js clustering (e.g. multiple indexing workers or multiple workers for multiple queues).
 + Fix settings to handle multiple ElasticSearch indexing nodes.
 + The concept of client-side plugins used to simplify data collection for common items.
 + A client-side, http-based listener/sender for easy queue publishing or testing.
@@ -43,4 +61,4 @@ A: Yes, it's named after the 90's time-travel horror film with epic graphics. La
 
 Q: *
 
-A: Any concerns are likey the result of an ops person writing code longer than a 5 lines.
+A: Any concerns are likey the result of an ops person writing code.
