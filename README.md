@@ -31,17 +31,19 @@ This allows any number of machines to push arbitrary data to a shared queue for 
 Manually pushing message to SQS via AWS console:
 ![ScreenShot](http://us-east.manta.joyent.com/jalquiza/public/github/langolier-1.png)
 
+Pulled/indexed by Langolier:
+<pre>
+Fri Apr 04 2014 21:21:39 GMT+0000 (UTC) [INFO]: Connected to ElasticSearch on 10.0.1.35:9200
+Fri Apr 04 2014 21:21:54 GMT+0000 (UTC) [INFO]: Listening for events on https://sqs.us-west-2.amazonaws.com/xxx/langolier-xxxxxx
+Fri Apr 04 2014 21:21:54 GMT+0000 (UTC) [INFO]: Wrote to index: metadata with type: some-type
+</pre>
+
 Indexed under respective ElasticSearch type:
 ![ScreenShot](http://us-east.manta.joyent.com/jalquiza/public/github/langolier-2.png)
 
 Search on fields via ElasticSearch dynamic mapping:
 ![ScreenShot](http://us-east.manta.joyent.com/jalquiza/public/github/langolier-3.png)
 
-<pre>
-Fri Apr 04 2014 21:21:39 GMT+0000 (UTC) [INFO]: Connected to ElasticSearch on 10.0.1.35:9200
-Fri Apr 04 2014 21:21:54 GMT+0000 (UTC) [INFO]: Listening for events on https://sqs.us-west-2.amazonaws.com/xxx/langolier-xxxxxx
-Fri Apr 04 2014 21:21:54 GMT+0000 (UTC) [INFO]: Wrote to index: metadata with type: some-type
-</pre>
 
 #### Pending Updates
 + Additional / modularized input. E.g., Redis is done but not yet rolled in.
