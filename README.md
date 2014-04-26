@@ -6,7 +6,7 @@ Example use cases would be tracking software package versions across large or mu
 
 #### Overview
 
-Point Langolier at an Amazon SQS queue for consumption and an ElasticSearch instance for writing. It maintains a single worker that long-polls in anticipation for events. Captured events are dispatched to ElasticSearch while the worker immediately returns to listening. The ElasticSearch indexing function fires off a callback to remove the message from the queue upon successful indexing.
+Point Langolier at an Amazon SQS queue for consumption and an ElasticSearch instance for writing. It maintains a single worker (due to SQS's availability/consistency model - avoiding duplicate message handling logic) that long-polls in anticipation for events. Captured events are dispatched to ElasticSearch while the worker immediately returns to listening. The ElasticSearch indexing function fires off a callback to remove the message from the queue upon successful indexing.
 
 Messages sent to SQS must follow a specific format:
 
@@ -46,11 +46,10 @@ Search on fields via ElasticSearch dynamic mapping:
 
 
 #### Pending Updates
-+ Additional / modularized input. E.g., Redis is done but not yet rolled in.
-+ Multiple in / multiple out.
-+ Better logging.
++ Additional / modularized inputs. E.g., Redis is done but not yet rolled in.
++ Multiple inputs / multiple outputs.
 + Startup options. E.g. verbose or 'to-console' logging.
-+ Node.js clustering (e.g. multiple indexing workers or multiple workers for multiple queues).
++ Node.js clustering for pooled indexing workers
 + Fix settings to handle multiple ElasticSearch indexing nodes.
 + The concept of client-side plugins used to simplify data collection for common items.
 + A client-side, http-based listener/sender for easy queue publishing or testing.
