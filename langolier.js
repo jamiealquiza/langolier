@@ -1,5 +1,27 @@
 #!/usr/bin/env node
 
+//The MIT License (MIT)
+//
+//Copyright (c) 2014 Jamie Alquiza 
+//
+//Permission is hereby granted, free of charge, to any person obtaining a copy
+//of this software and associated documentation files (the "Software"), to deal
+//in the Software without restriction, including without limitation the rights
+//to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//copies of the Software, and to permit persons to whom the Software is
+//furnished to do so, subject to the following conditions:
+//
+//The above copyright notice and this permission notice shall be included in
+//all copies or substantial portions of the Software.
+//
+//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+//THE SOFTWARE.
+
 var settings = require('./settings.js'),
     fs = require('fs'),
     elasticsearch = require('elasticsearch'),
@@ -47,7 +69,7 @@ function estabSqs() {
   });
 }
 estabSqs(); // Initial connection
-setInterval(estabSqs, 300000); // Refresh every 5 minutes to prevent AWS 15min timeout
+setInterval(estabSqs, 300000); // Refresh conn; AWS API has 15 min timeout
 
 // ElasticSearch Functions
 function indexMsg(message, receipt) { 
@@ -60,7 +82,7 @@ function indexMsg(message, receipt) {
       writeLog(err, "WARN"); 
     }
     else {
-      delMsg(receipt); // Message isn't removed from queue unless indexing is successful 
+      delMsg(receipt); 
       writeLog("Wrote to index: " + settings.index + " with type: " + message[0], "INFO");
     };
   });
@@ -82,14 +104,15 @@ function getMsg() {
             body = JSON.parse(data.Messages[0].Body);
         message = [];
         message[0] = body.DataType; // DataType key defines type in ElasticSearch
-        message[1] = body.Message; // Message object contains the actual data
-        indexMsg(message, receipt); // Send [ 'DataType', 'Message' ] + SQS receipt to ES (see delMsg callback)
+        message[1] = body.Message; // Message object becomes ES document _source data
+        indexMsg(message, receipt); // Send "[ 'DataType', 'Message' ]" & "SQS receipt" to ES
       };
-    getMsg(); // Long-poll for 'WaitTimeSeconds', callback to self if message is available
+    getMsg(); // Long-poll for 'WaitTimeSeconds', immediate callback to self if message is available
     };
   });
 };
 
+// Callback on successful ES indexing
 function delMsg(receipt) {
   clientSqs.deleteMessage({
     QueueUrl: settings.aws.sqsUrl,
