@@ -2,7 +2,7 @@
 
 //The MIT License (MIT)
 //
-//Copyright (c) 2014 Jamie Alquiza 
+//Copyright (c) 2014 Jamie Alquiza
 //
 //Permission is hereby granted, free of charge, to any person obtaining a copy
 //of this software and associated documentation files (the "Software"), to deal
@@ -22,17 +22,20 @@
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //THE SOFTWARE.
 
-var settings = require('./settings.js'),
-    fs = require('fs'),
-    elasticsearch = require('elasticsearch'),
-    AWS = require('aws-sdk');
+var settings = require('./settings.js');
+var fs = require('fs');
+var elasticsearch = require('elasticsearch');
+var AWS = require('aws-sdk');
 
-// Init & misc.
-AWS.config.update({accessKeyId: settings.aws.accessKeyId, secretAccessKey: settings.aws.secretAccessKey, region: settings.aws.region});
 
-function alertInfo(message) {
-  console.log(Date() + " [INFO]: " + message)
-}
+// --- Init & Misc. --- //
+
+AWS.config.update({
+  accessKeyId: settings.aws.accessKeyId,
+  secretAccessKey: settings.aws.secretAccessKey,
+  region: settings.aws.region
+});
+
 
 function writeLog(message, level) {
   fs.appendFile(settings.logFile, Date() + " [" + level + "]: " + message + "\n", function (err) {
@@ -40,7 +43,10 @@ function writeLog(message, level) {
   });
 }
 
-// Create clients
+
+// --- Output: ElasticSearch --- //
+
+// Init
 var clientEs = new elasticsearch.Client({
   host: settings.es.host + ':' + settings.es.port,
   apiVersion: settings.es.apiVer
@@ -57,6 +63,31 @@ clientEs.ping({
   };
 });
 
+// Functions
+function indexMsg(message, receipts) {
+  clientEs.bulk({
+    body: message
+  }, function (err, resp) {
+    if (err) {
+      console.log(err);
+    }
+    else {
+      console.log("Wrote "+ message.length + " items to index '" + settings.index + "' in " + resp.took + "ms", "INFO");
+      delMsg(receipts)
+    };
+  });
+};
+
+
+// --- Input: AWS SQS --- //
+
+// Init
+var sqsParams = {
+  QueueUrl: settings.aws.sqsUrl,
+  MaxNumberOfMessages: 10,
+  WaitTimeSeconds: 5,
+};
+
 function estabSqs() {
   clientSqs = new AWS.SQS({region: settings.aws.region});
   clientSqs.getQueueAttributes({QueueUrl: settings.aws.sqsUrl}, function(err, data) {
@@ -68,59 +99,58 @@ function estabSqs() {
     };
   });
 }
-estabSqs(); // Initial connection
-setInterval(estabSqs, 300000); // Refresh conn; AWS API has 15 min timeout
 
-// ElasticSearch Functions
-function indexMsg(message, receipt) { 
-  clientEs.create({
-    index: settings.index,
-    type: message[0], 
-    body: message[1] 
-  }, function (err, resp) {
-    if (err) { 
-      writeLog(err, "WARN"); 
-    }
-    else {
-      delMsg(receipt); 
-      writeLog("Wrote to index: " + settings.index + " with type: " + message[0], "INFO");
+// Functions
+function parseSqsMsg(messages) {
+  var msgCount = messages.length;
+  var docs = [];
+  var receipts = [];
+  var doc = {};
+  var receipt = {};
+  for (var msg = 0; msg < msgCount; msg++) {
+    var rcpt = messages[msg].ReceiptHandle;
+    var body = JSON.parse(messages[msg].Body);
+    doc = { index: {
+        _index: settings.index,
+        _type: body.DataType,
+        body: body.Message
+      }
     };
-  });
-};
+    receipt = { Id: msg.toString(), ReceiptHandle: rcpt };
+    docs.push(doc);
+    receipts.push(receipt);
+  };
+  indexMsg(docs, receipts)
+}
 
-// AWS Functions 
-var sqsParams = {
-  QueueUrl: settings.aws.sqsUrl,
-  MaxNumberOfMessages: 1, // Speed doesn't matter enough yet to deal with batches
-  WaitTimeSeconds: 5,
-};
-
-function getMsg() {
+function pollSqs() {
   clientSqs.receiveMessage(sqsParams, function (err, data) {
-    if (err) writeLog(err, "WARN");
-    else {
+    if (err) {
+      writeLog(err, "WARN");
+    } else {
       if (data.Messages) {
-        var receipt = data.Messages[0].ReceiptHandle,
-            body = JSON.parse(data.Messages[0].Body);
-        message = [];
-        message[0] = body.DataType; // DataType key defines type in ElasticSearch
-        message[1] = body.Message; // Message object becomes ES document _source data
-        indexMsg(message, receipt); // Send "[ 'DataType', 'Message' ]" & "SQS receipt" to ES
+        parseSqsMsg(data.Messages)
       };
-    getMsg(); // Long-poll for 'WaitTimeSeconds', immediate callback to self if message is available
+    pollSqs(); // Long-poll for 'WaitTimeSeconds', immediate call to self if message is available
     };
   });
 };
 
 // Callback on successful ES indexing
-function delMsg(receipt) {
-  clientSqs.deleteMessage({
+function delSqsMsg(receipts) {
+  clientSqs.deleteMessageBatch({
     QueueUrl: settings.aws.sqsUrl,
-    ReceiptHandle: receipt,
-  }, function(err, data) {
-    if (err) writeLog(err, "WARN");
+    Entries: receipts
+  }, function(err, resp) {
+    if (err) {
+      writeLog(err, "WARN")
+    } else {
+      console.log(resp)
+    }
   });
 };
 
-// Kick it off
-getMsg();
+// Service
+estabSqs(); // Initial connection
+setInterval(estabSqs, 300000); // Refresh conn; AWS API has 15 min timeout
+pollSqs();
