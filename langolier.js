@@ -69,11 +69,11 @@ function indexMsg(message, receipts) {
     body: message
   }, function (err, resp) {
     if (err) {
-      console.log(err);
+      writeLog(err, "WARN");
     }
     else {
-      console.log("Wrote "+ message.length + " items to index '" + settings.index + "' in " + resp.took + "ms", "INFO");
-      delMsg(receipts)
+      writeLog("Wrote "+ message.length + " items to index '" + settings.index + "' in " + resp.took + "ms", "INFO");
+      delSqsMsg(receipts);
     };
   });
 };
@@ -142,11 +142,7 @@ function delSqsMsg(receipts) {
     QueueUrl: settings.aws.sqsUrl,
     Entries: receipts
   }, function(err, resp) {
-    if (err) {
-      writeLog(err, "WARN")
-    } else {
-      console.log(resp)
-    }
+    if (err) writeLog(err, "WARN")
   });
 };
 
