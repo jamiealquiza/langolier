@@ -6,7 +6,7 @@ Example use cases would be tracking software package versions across large or mu
 
 #### Overview
 
-Point Langolier at an Amazon SQS queue for consumption and an ElasticSearch instance for writing. It maintains a single worker (due to SQS's availability/consistency model - avoiding duplicate message handling logic) that long-polls in anticipation for events. Captured events are dispatched to ElasticSearch while the worker immediately returns to listening. The ElasticSearch indexing function fires off a callback to remove the message from the queue upon successful indexing.
+Point Langolier at an Amazon SQS queue for consumption and an ElasticSearch instance for writing. It uses long-polling and batched retrieval (defaults to AWS's current max of 10). Captured events are dispatched to ElasticSearch bulk indexing while the worker immediately returns to listening. The ElasticSearch indexing function fires off a callback to remove the message from the queue upon successful indexing.
 
 Messages sent to SQS must follow a specific format:
 
