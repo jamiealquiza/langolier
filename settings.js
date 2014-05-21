@@ -5,7 +5,9 @@ settings.aws = {};
 
 // General
 settings.index = 'index';
-settings.logFile = '/var/log/output.log';
+settings.logFile = '/var/log/langolier.log';
+// If logConsole is true, logFile will not be written.
+settings.logConsole = true;
 
 // Input: Amazon SQS
 settings.aws.accessKeyId = '';

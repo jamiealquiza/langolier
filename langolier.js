@@ -38,9 +38,13 @@ AWS.config.update({
 
 
 function writeLog(message, level) {
-  fs.appendFile(settings.logFile, Date() + " [" + level + "]: " + message + "\n", function (err) {
-    if (err) throw err;
-  });
+  if (settings.logConsole) {
+    console.log(Date() + " [" + level + "]: " + message);
+  } else {
+    fs.appendFile(settings.logFile, Date() + " [" + level + "]: " + message + "\n", function (err) {
+      if (err) throw err;
+    });
+  }
 }
 
 
@@ -63,7 +67,7 @@ clientEs.ping({
   };
 });
 
-// Functions
+// General
 function indexMsg(message, receipts) {
   clientEs.bulk({
     body: message
@@ -100,7 +104,7 @@ function estabSqs() {
   });
 }
 
-// Functions
+// General
 function parseSqsMsg(messages) {
   var msgCount = messages.length;
   var docs = [];
