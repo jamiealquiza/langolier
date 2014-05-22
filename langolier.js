@@ -76,7 +76,7 @@ function indexMsg(message, receipts) {
       writeLog(err, "WARN");
     }
     else {
-      writeLog("Wrote "+ message.length + " items to index '" + settings.index + "' in " + resp.took + "ms", "INFO");
+      writeLog("Wrote "+ message.length/2 + " items to index '" + settings.index + "' in " + resp.took + "ms", "INFO");
       delSqsMsg(receipts);
     };
   });
@@ -109,21 +109,22 @@ function parseSqsMsg(messages) {
   var msgCount = messages.length;
   var docs = [];
   var receipts = [];
+  var meta = {};
   var doc = {};
   var receipt = {};
   for (var msg = 0; msg < msgCount; msg++) {
     var rcpt = messages[msg].ReceiptHandle;
     var body = JSON.parse(messages[msg].Body);
-    doc = { index: {
+    meta = { index: {
         _index: settings.index,
-        _type: body.DataType,
-        body: body.Message
-      }
-    };
+        _type: body.DataType }
+      };
+    doc = body.Message;
     receipt = { Id: msg.toString(), ReceiptHandle: rcpt };
-    docs.push(doc);
+    docs.push(meta, doc);
     receipts.push(receipt);
   };
+  //console.log(docs)
   indexMsg(docs, receipts)
 }
 
