@@ -18,6 +18,6 @@ settings.aws.sqsUrl = '';
 // Output: ElasticSearch
 settings.es.host = '127.0.0.1';
 settings.es.port = '9200';
-settings.es.apiVer = '1.0';
+settings.es.apiVer = '1.1';
 
 module.exports = settings;

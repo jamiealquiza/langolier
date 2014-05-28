@@ -24,6 +24,7 @@
 
 var settings = require('./settings.js');
 var fs = require('fs');
+var crypto = require('crypto');
 var elasticsearch = require('elasticsearch');
 var AWS = require('aws-sdk');
 
@@ -36,7 +37,6 @@ AWS.config.update({
   region: settings.aws.region
 });
 
-
 function writeLog(message, level) {
   if (settings.logConsole) {
     console.log(Date() + " [" + level + "]: " + message);
@@ -47,6 +47,13 @@ function writeLog(message, level) {
   }
 }
 
+function hashId(input) {
+  var hash = crypto.createHash('sha1');
+  hash.setEncoding('hex');
+  hash.write(input);
+  hash.end();
+  return hash.read()
+}
 
 // --- Output: ElasticSearch --- //
 
@@ -117,7 +124,8 @@ function parseSqsMsg(messages) {
     var body = JSON.parse(messages[msg].Body);
     meta = { index: {
         _index: settings.index,
-        _type: body.DataType }
+        _type: body.DataType,
+        _id: hashId(JSON.stringify(body.Message)) }
       };
     doc = body.Message;
     receipt = { Id: msg.toString(), ReceiptHandle: rcpt };
