@@ -48,11 +48,13 @@ Search on fields via ElasticSearch dynamic mapping:
 
 
 #### Pending Updates
++ Statsd integration
++ Controls on in-flight transaction groups
++ Per-message delete handling based on indexing success
 + Additional / modularized inputs. E.g., Redis is done but not yet rolled in.
 + Multiple inputs / multiple outputs.
-+ Node.js clustering
 + Fix settings to handle multiple ElasticSearch indexing nodes.
-+ The concept of client-side plugins used to simplify data collection for common items.
++ Client-side plugins used to simplify data collection for common items.
 
 #### FAQ:
 
