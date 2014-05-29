@@ -47,8 +47,9 @@ Using Kibana to search on dynamically mapped fields:
 
 #### Pending Updates
 + Statsd integration
-+ Controls on in-flight transaction groups
-+ Per-message delete handling based on indexing success
++ Controls on in-flight transaction group queues
++ Automatic, exponential throttling based on latency
++ Per-message (rather than per batch) delete handling
 + Additional / modularized inputs. E.g., Redis is done but not yet rolled in.
 + Multiple inputs / multiple outputs.
 + Fix settings to handle multiple ElasticSearch indexing nodes.
