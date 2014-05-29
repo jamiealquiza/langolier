@@ -8,7 +8,7 @@ Example use cases would be tracking software package versions across large or mu
 
 Point Langolier at an Amazon SQS queue for consumption and an ElasticSearch instance for writing. It uses long-polling and batched retrieval (defaults to AWS's current max of 10), with an ability to run multiple concurrent workers. Captured events are dispatched to ElasticSearch bulk indexing while the worker immediately returns to listening. The ElasticSearch indexing function fires off a callback to remove the message from the queue upon successful indexing.
 
-Langolier also uses Node's crypto module to generate message content hash IDs in order to prevent the same item from being stored twice in ElasticSearch. This is important if you're using an AP model / at-least-once-delivery message queue such as SQS. The crypto module rides on OpenSSL; no appreciable overhead has been realized with content hashing and Langolier has proven to deliver more than 1,600 events/sec. on a single-core VM.
+Langolier also uses Node's crypto module to generate message content hash IDs in order to prevent the same item from being stored twice in ElasticSearch. This is important if you're using an AP model / at-least-once-delivery message queue such as SQS.
 
 Messages sent to SQS must follow a specific format:
 
