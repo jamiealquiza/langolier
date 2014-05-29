@@ -4,7 +4,7 @@ settings.es = {};
 settings.sqs = {};
 
 // General
-settings.workers = 4;
+settings.workers = 2;
 settings.logFile = '/var/log/langolier.log';
 // If logConsole is true, logFile will not be written.
 settings.logConsole = false;
