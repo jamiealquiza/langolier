@@ -32,6 +32,8 @@ var AWS = require('aws-sdk');
 
 var workers = settings.workers;
 
+// --- Master Process --- //
+
 if (cluster.isMaster) {
   for (var i = 0; i < workers; i++) {
     cluster.fork();
@@ -39,25 +41,30 @@ if (cluster.isMaster) {
   // Log events indexed on interval
   var eventsIndexed = 0;
   setInterval(function() {
-    writeLog("Events indexed, last 5sec: " + eventsIndexed, "INFO");
-    eventsIndexed = 0;
+    if (eventsIndexed > 0) {
+      writeLog("Events indexed, last 5sec: " + eventsIndexed, "INFO");
+      eventsIndexed = 0;
+    }
   }, 5000);
-
+  // Process worker messages
   function messageHandler(msg) {
     if (msg.cmd && msg.cmd == 'eventsIndexed') {
       eventsIndexed += msg.count;
     }
   }
-
+  // Event listener for worker messages
   Object.keys(cluster.workers).forEach(function(id) {
     cluster.workers[id].on('message', messageHandler);
   });
-
+  // Respawn failed workers
   cluster.on('exit', function(worker, code, signal) {
     writeLog("Worker died, respawning", "WARN");
     cluster.fork();
   });
+
 } else {
+
+// --- Worker Processes --//
 
   // --- Init & Misc. --- //
 
