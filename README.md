@@ -1,14 +1,14 @@
 ### Langolier
 
-Is a lightweight, fast node.js queue processor that makes it easy to index arbitrary data into ElasticSearch, with the assumption it will be viewed using Kibana (see recon-dashboard project).
+Is a lightweight, fast node.js queue processor that makes it easy to index arbitrary data into ElasticSearch.
 
-Example use cases would be tracking software package versions across large or multiple environments, or high-level visibility into AWS resources (EC2, EBS vols, etc.).
+Example use cases would be tracking software package versions across large or multiple environments or high-level visibility into AWS resources (EC2, EBS vols, etc.).
 
 #### Overview
 
-Point Langolier at an Amazon SQS queue for consumption and an ElasticSearch instance for writing. It uses long-polling and batched retrieval (defaults to AWS's current max of 10), with an ability to run multiple concurrent workers. Captured events are dispatched to ElasticSearch bulk indexing while the worker immediately returns to listening. The ElasticSearch indexing function fires off a callback to remove the message from the queue upon successful indexing.
+Point Langolier at an Amazon SQS queue for consumption and an ElasticSearch instance for writing. It uses long-polling and batched retrieval (defaults to AWS's current max of 10), with an ability to run a pool of multiple workers. Captured events are dispatched to ElasticSearch bulk indexing while the worker immediately returns to listening. The ElasticSearch indexing function fires off a callback to remove the message from the queue, only upon successful indexing.
 
-Langolier also uses Node's crypto module to generate message content hash IDs in order to prevent the same item from being stored twice in ElasticSearch. This is important if you're using an AP model / at-least-once-delivery message queue such as SQS. Crypto rides on top of OpenSSL and exhibits great performance; a Langolier test setup was able to pull over 2,400 events/sec. using a single c3.xlarge instance.
+Langolier also uses Node's crypto module to generate message content hash IDs in order to prevent the same item from being stored twice in ElasticSearch. This is important if you're using an AP model / at-least-once-delivery message queue such as SQS. Crypto rides on top of OpenSSL and exhibits great performance; a Langolier test setup was able to process over 2,400 events/sec. using a single c3.xlarge instance and sha1 hash IDs (default, not yet configurable).
 
 Messages sent to SQS must follow a specific format:
 
