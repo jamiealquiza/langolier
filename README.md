@@ -24,8 +24,6 @@ Langolier will index the Message object as-is, using 'DataType' as the ElasticSe
 curl -XPOST 'http://127.0.0.1:9200/metadata/some-type/' -d " { "TimeStamp": "2014-04-02T13:04:01.578-04:00", "some-key": "some-val" }"
 </pre>
 
-(Note: Kibana should be configured to use the 'TimeStamp' field for time references.)
-
 This allows any number of machines to push arbitrary data to a shared queue for organized storage.
 
 #### Watch it go
@@ -43,7 +41,7 @@ Fri Apr 04 2014 21:21:54 GMT+0000 (UTC) [INFO]: Wrote 1 items to index 'metadata
 Indexed under respective ElasticSearch type:
 ![ScreenShot](http://us-east.manta.joyent.com/jalquiza/public/github/langolier-2.png)
 
-Search on fields via ElasticSearch dynamic mapping:
+Using Kibana to search on dynamically mapped fields:
 ![ScreenShot](http://us-east.manta.joyent.com/jalquiza/public/github/langolier-3.png)
 
 
