@@ -36,6 +36,22 @@ if (cluster.isMaster) {
   for (var i = 0; i < workers; i++) {
     cluster.fork();
   }
+  // Log events indexed on interval
+  var eventsIndexed = 0;
+  setInterval(function() {
+    writeLog("Events indexed, last 5sec: " + eventsIndexed, "INFO");
+    eventsIndexed = 0;
+  }, 5000);
+
+  function messageHandler(msg) {
+    if (msg.cmd && msg.cmd == 'eventsIndexed') {
+      eventsIndexed += msg.count;
+    }
+  }
+
+  Object.keys(cluster.workers).forEach(function(id) {
+    cluster.workers[id].on('message', messageHandler);
+  });
 
   cluster.on('exit', function(worker, code, signal) {
     writeLog("Worker died, respawning", "WARN");
@@ -99,6 +115,7 @@ if (cluster.isMaster) {
       else {
         writeLog("Wrote "+ message.length/2 + " items to index '" + settings.es.index + "' in " + resp.took + "ms", "INFO");
         delSqsMsg(receipts);
+        process.send({ cmd: 'eventsIndexed', count: message.length/2 });
       };
     });
   };
@@ -127,13 +144,12 @@ if (cluster.isMaster) {
 
   // General
   function parseSqsMsg(messages) {
-    var msgCount = messages.length;
     var docs = [];
     var receipts = [];
     var meta = {};
     var doc = {};
     var receipt = {};
-    for (var msg = 0; msg < msgCount; msg++) {
+    for (var msg = 0; msg < messages.length; msg++) {
       var rcpt = messages[msg].ReceiptHandle;
       var body = JSON.parse(messages[msg].Body);
       meta = { index: {
@@ -146,7 +162,6 @@ if (cluster.isMaster) {
       docs.push(meta, doc);
       receipts.push(receipt);
     };
-    //console.log(docs)
     indexMsg(docs, receipts)
   }
 
