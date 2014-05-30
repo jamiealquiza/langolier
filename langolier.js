@@ -29,37 +29,57 @@ var cluster = require('cluster');
 var elasticsearch = require('elasticsearch');
 var AWS = require('aws-sdk');
 
-
-var workers = settings.workers;
+// Debugging opts
+var noop = {};
+var args = process.argv.slice(2);
+var opts = args.filter(function(index) {
+  return index == "--noop"
+});
+if (opts[0] === "--noop") {
+  settings.logConsole = true;
+  noop.indexMsg = true;
+  noop.clientEs = true;
+}
 
 // --- Master Process --- //
 
 if (cluster.isMaster) {
-  for (var i = 0; i < workers; i++) {
+  for (var i = 0; i < settings.workers; i++) {
     cluster.fork();
   }
+
   // Log events indexed on interval
   var eventsIndexed = 0;
   setInterval(function() {
     if (eventsIndexed > 0) {
-      writeLog("Events indexed, last 5sec: " + eventsIndexed, "INFO");
+      writeLog("Events handled, last 5s: " + eventsIndexed, "INFO");
       eventsIndexed = 0;
     }
   }, 5000);
+
   // Process worker messages
   function messageHandler(msg) {
     if (msg.cmd && msg.cmd == 'eventsIndexed') {
       eventsIndexed += msg.count;
     }
   }
+
   // Event listener for worker messages
   Object.keys(cluster.workers).forEach(function(id) {
     cluster.workers[id].on('message', messageHandler);
   });
+
   // Respawn failed workers
+  var respawnCount = 0;
   cluster.on('exit', function(worker, code, signal) {
-    writeLog("Worker died, respawning", "WARN");
-    cluster.fork();
+    if (respawnCount <= 5) {
+      writeLog("Worker died, respawning", "WARN");
+      cluster.fork();
+      respawnCount ++;
+    } else {
+      writeLog("Respawn limit reached, master process exiting", "WARN")
+      process.exit(1);
+    } 
   });
 
 } else {
@@ -95,36 +115,39 @@ if (cluster.isMaster) {
   // --- Output: ElasticSearch --- //
 
   // Init
-  var clientEs = new elasticsearch.Client({
-    host: settings.es.host + ':' + settings.es.port,
-    apiVersion: settings.es.apiVer
-  });
+    if (noop.clientEs === undefined) {
+      var clientEs = new elasticsearch.Client({
+        host: settings.es.host + ':' + settings.es.port,
+        apiVersion: settings.es.apiVer
+      });
 
-  clientEs.ping({
-    requestTimeout: 1000,
-  }, function (err) {
-    if (err) {
-      writeLog(err, "WARN");
-    }
-    else {
-      writeLog("Connected to ElasticSearch on " + settings.es.host + ':' + settings.es.port, "INFO");
-    };
-  });
+      clientEs.ping({ requestTimeout: 1000 }, function (err) {
+        if (err) {
+          writeLog(err, "WARN");
+        } else {
+          writeLog("Connected to ElasticSearch on " + settings.es.host + ':' + settings.es.port, "INFO");
+        };
+      });
+  }
 
   // General
   function indexMsg(message, receipts) {
-    clientEs.bulk({
-      body: message
-    }, function (err, resp) {
-      if (err) {
-        writeLog(err, "WARN");
-      }
-      else {
-        writeLog("Wrote "+ message.length/2 + " items to index '" + settings.es.index + "' in " + resp.took + "ms", "INFO");
-        delSqsMsg(receipts);
-        process.send({ cmd: 'eventsIndexed', count: message.length/2 });
-      };
-    });
+    if (noop.indexMsg === undefined) {
+      clientEs.bulk({
+        body: message
+      }, function (err, resp) {
+        if (err) {
+          writeLog(err, "WARN");
+        }
+        else {
+          writeLog("Wrote "+ message.length/2 + " item(s) to index '" + settings.es.index + "' in " + resp.took + "ms", "INFO");
+          delSqsMsg(receipts);
+          process.send({ cmd: 'eventsIndexed', count: message.length/2 });
+        };
+      });
+    } else {
+      process.send({ cmd: 'eventsIndexed', count: message.length/2 });
+    }
   };
 
 
@@ -142,8 +165,7 @@ if (cluster.isMaster) {
     clientSqs.getQueueAttributes({QueueUrl: settings.sqs.sqsUrl}, function(err, data) {
       if (err) {
         writeLog(err, "WARN");
-      }
-      else {
+      } else {
         writeLog("Listening for events on " + settings.sqs.sqsUrl, "INFO");
       };
     });
@@ -169,7 +191,7 @@ if (cluster.isMaster) {
       docs.push(meta, doc);
       receipts.push(receipt);
     };
-    indexMsg(docs, receipts)
+     indexMsg(docs, receipts)
   }
 
   function pollSqs() {
