@@ -44,6 +44,21 @@ Indexed under respective ElasticSearch type:
 Using Kibana to search on dynamically mapped fields:
 ![ScreenShot](http://us-east.manta.joyent.com/jalquiza/public/github/langolier-3.png)
 
+#### No Op Mode
+
+Langolier has a '--noop' flag that can be passed in if you want to test connectivity or the performance of a setup. It will set logging to console, disable indexing (or even attempting to connect to an ElasticSearch endpoint) and disable delete receipts from being sent to SQS (meaning messages will not be removed).
+
+<pre>
+ % ./langolier.js --noop
+Sat May 31 2014 13:51:26 GMT-0400 (EDT) [INFO]: Listening for events on https://sqs.us-west-2.amazonaws.com/xxx/langolier
+Sat May 31 2014 13:51:26 GMT-0400 (EDT) [INFO]: Listening for events on https://sqs.us-west-2.amazonaws.com/xxx/langolier
+Sat May 31 2014 13:51:26 GMT-0400 (EDT) [INFO]: Listening for events on https://sqs.us-west-2.amazonaws.com/xxx/langolier
+Sat May 31 2014 13:51:26 GMT-0400 (EDT) [INFO]: Listening for events on https://sqs.us-west-2.amazonaws.com/xxx/langolier
+Sat May 31 2014 13:51:30 GMT-0400 (EDT) [INFO]: Events handled, last 5s: 240
+Sat May 31 2014 13:51:35 GMT-0400 (EDT) [INFO]: Events handled, last 5s: 370
+Sat May 31 2014 13:51:40 GMT-0400 (EDT) [INFO]: Events handled, last 5s: 360
+Sat May 31 2014 13:51:45 GMT-0400 (EDT) [INFO]: Events handled, last 5s: 360
+</pre>
 
 #### Pending Updates
 + Statsd integration
