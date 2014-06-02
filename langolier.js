@@ -49,18 +49,18 @@ if (cluster.isMaster) {
   }
 
   // Log events indexed on interval
-  var eventsIndexed = 0;
+  var eventsHandled = 0;
   setInterval(function() {
-    if (eventsIndexed > 0) {
-      writeLog("Events handled, last 5s: " + eventsIndexed, "INFO");
-      eventsIndexed = 0;
+    if (eventsHandled > 0) {
+      writeLog("Events handled, last 5s: " + eventsHandled, "INFO");
     }
+    eventsHandled = 0;
   }, 5000);
 
   // Process worker messages
   function messageHandler(msg) {
-    if (msg.cmd && msg.cmd == 'eventsIndexed') {
-      eventsIndexed += msg.count;
+    if (msg.cmd && msg.cmd == 'eventsHandled') {
+      eventsHandled += msg.count;
     }
   }
 
@@ -142,11 +142,11 @@ if (cluster.isMaster) {
         else {
           writeLog("Wrote "+ message.length/2 + " item(s) to index '" + settings.es.index + "' in " + resp.took + "ms", "INFO");
           delSqsMsg(receipts);
-          process.send({ cmd: 'eventsIndexed', count: message.length/2 });
+          process.send({ cmd: 'eventsHandled', count: message.length/2 });
         };
       });
     } else {
-      process.send({ cmd: 'eventsIndexed', count: message.length/2 });
+      process.send({ cmd: 'eventsHandled', count: message.length/2 });
     }
   };
 
