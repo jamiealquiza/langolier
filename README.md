@@ -16,7 +16,7 @@ Messages sent to SQS must follow a specific format:
 { "DataType": "some-type", "Message":  { "TimeStamp": "2014-04-02T13:04:01.578-04:00", "some-key": "some-val" } }
 </pre>
 
-This format is used to take advantage of ElasticSearch dynamic mapping and Kibana's filtering / search featurs, in lieu of requiring any parsing logic (for now). Your data starts with 'some-key' / 'some-val'; many key-value pairs can be included in each message.
+This format is used to take advantage of ElasticSearch dynamic mapping and Kibana's filtering / search features, in lieu of requiring any parsing logic (for now). Your data starts with 'some-key' / 'some-val'; many key-value pairs can be included in each message.
 
 Langolier will index the Message object as-is, using 'DataType' as the ElasticSearch document type. Assuming Langolier was configured to write to an index called 'metadata', the example message would translate to the following curl equivalent:
 
