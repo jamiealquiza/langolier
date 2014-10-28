@@ -180,18 +180,29 @@ if (cluster.isMaster) {
     var receipt = {};
     for (var msg = 0; msg < messages.length; msg++) {
       var rcpt = messages[msg].ReceiptHandle;
-      var body = JSON.parse(messages[msg].Body);
-      meta = { index: {
-        _index: settings.es.index,
-        _type: body.DataType,
-        _id: hashId(JSON.stringify(body.Message)) }
+      try {
+        JSON.parse(messages[msg].Body);
+        body = JSON.parse(messages[msg].Body);
+        meta = { index: {
+          _index: settings.es.index,
+          _type: body.DataType,
+          _id: hashId(JSON.stringify(body.Message)) }
+        }
+       doc = body.Message;
+      } catch (err) {
+        var body = messages[msg].Body;
+        meta = { index: {
+          _index: settings.es.index,
+          _type: "failedParse",
+          _id: hashId(body) }
+        }
+        doc = JSON.parse('{ "Message":"' + body.replace(/\n$/, "") + '"}');
       };
-      doc = body.Message;
       receipt = { Id: msg.toString(), ReceiptHandle: rcpt };
       docs.push(meta, doc);
       receipts.push(receipt);
     };
-     indexMsg(docs, receipts)
+    indexMsg(docs, receipts)
   }
 
   function pollSqs() {
@@ -207,7 +218,7 @@ if (cluster.isMaster) {
     });
   };
 
-  // Callback on successful ES indexing
+  // Called on successful ES indexing
   function delSqsMsg(receipts) {
     clientSqs.deleteMessageBatch({
       QueueUrl: settings.sqs.sqsUrl,
