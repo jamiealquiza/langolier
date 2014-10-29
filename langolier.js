@@ -72,14 +72,8 @@ if (cluster.isMaster) {
   // Respawn failed workers
   var respawnCount = 0;
   cluster.on('exit', function(worker, code, signal) {
-    if (respawnCount <= 5) {
-      writeLog("Worker died, respawning", "WARN");
-      cluster.fork();
-      respawnCount ++;
-    } else {
-      writeLog("Respawn limit reached, master process exiting", "WARN")
-      process.exit(1);
-    }
+    writeLog("Worker died, respawning", "WARN");
+    cluster.fork();
   });
 
 } else {
@@ -98,7 +92,8 @@ if (cluster.isMaster) {
     if (settings.logConsole) {
       console.log(Date() + " [" + level + "]: " + message);
     } else {
-      fs.appendFile(settings.logFile, Date() + " [" + level + "]: " + message + "\n", function (err) {
+      fs.appendFile(settings.logFile, Date() + " [" + level + "]: "
+        + message + "\n", function (err) {
         if (err) throw err;
       });
     }
@@ -125,7 +120,8 @@ if (cluster.isMaster) {
         if (err) {
           writeLog(err, "WARN");
         } else {
-          writeLog("Connected to ElasticSearch on " + settings.es.host + ':' + settings.es.port, "INFO");
+          writeLog("Connected to ElasticSearch on "
+          + settings.es.host + ':' + settings.es.port, "INFO");
         };
       });
   }
@@ -140,7 +136,11 @@ if (cluster.isMaster) {
           writeLog(err, "WARN");
         }
         else {
-          writeLog("Wrote "+ message.length/2 + " item(s) to index '" + settings.es.index + "' in " + resp.took + "ms", "INFO");
+          writeLog("Wrote " 
+            + message.length/2
+            + " item(s) to index '"
+            + settings.es.index
+            + "' in " + resp.took + "ms", "INFO");
           delSqsMsg(receipts);
           process.send({ cmd: 'eventsHandled', count: message.length/2 });
         };
@@ -181,22 +181,34 @@ if (cluster.isMaster) {
     for (var msg = 0; msg < messages.length; msg++) {
       var rcpt = messages[msg].ReceiptHandle;
       try {
-        JSON.parse(messages[msg].Body);
         body = JSON.parse(messages[msg].Body);
-        meta = { index: {
-          _index: settings.es.index,
-          _type: body.DataType,
-          _id: hashId(JSON.stringify(body.Message)) }
-        }
-       doc = body.Message;
+	if (body.DataType && body.Message.TimeStamp) {
+          doc = body.Message;
+          meta = { index: {
+            _index: settings.es.index,
+            _type: body.DataType,
+            _id: hashId(JSON.stringify(body)) }
+          }
+        } else {
+          doc = body;
+          doc.TimeStamp = new Date().toISOString()
+          meta = { index: {
+            _index: settings.es.index,
+            _type: "json",
+            _id: hashId(JSON.stringify(body)) }
+          }
+        };
       } catch (err) {
         var body = messages[msg].Body;
         meta = { index: {
           _index: settings.es.index,
-          _type: "failedParse",
+          _type: "plaintext",
           _id: hashId(body) }
         }
-        doc = JSON.parse('{ "Message":"' + body.replace(/\n$/, "") + '"}');
+        doc = JSON.parse('{"TimeStamp": "' 
+          + new Date().toISOString() 
+          + '", "Message":"' + body.replace(/\n$/, "").replace(/\n/g, " ") 
+          + '"}');
       };
       receipt = { Id: msg.toString(), ReceiptHandle: rcpt };
       docs.push(meta, doc);
@@ -213,7 +225,7 @@ if (cluster.isMaster) {
         if (data.Messages) {
           parseSqsMsg(data.Messages)
         };
-        pollSqs(); // Long-poll for 'WaitTimeSeconds', immediate call to self if message is available
+        pollSqs(); // Long-poll for 'WaitTimeSeconds', loop on message receipt
       };
     });
   };
