@@ -70,7 +70,6 @@ if (cluster.isMaster) {
   });
 
   // Respawn failed workers
-  var respawnCount = 0;
   cluster.on('exit', function(worker, code, signal) {
     writeLog("Worker died, respawning", "WARN");
     cluster.fork();
@@ -181,34 +180,38 @@ if (cluster.isMaster) {
     for (var msg = 0; msg < messages.length; msg++) {
       var rcpt = messages[msg].ReceiptHandle;
       try {
-        body = JSON.parse(messages[msg].Body);
-	if (body.DataType && body.Message.TimeStamp) {
-          doc = body.Message;
+        var body = JSON.parse(messages[msg].Body);
+	if (body['@type']) {
+          var type = body['@type']
+          delete body['@type']
+          doc = body
           meta = { index: {
             _index: settings.es.index,
-            _type: body.DataType,
+            _type: type,
             _id: hashId(JSON.stringify(body)) }
           }
         } else {
-          doc = body;
-          doc.TimeStamp = new Date().toISOString()
+          doc = body
           meta = { index: {
             _index: settings.es.index,
             _type: "json",
             _id: hashId(JSON.stringify(body)) }
           }
         };
-      } catch (err) {
-        var body = messages[msg].Body;
-        meta = { index: {
-          _index: settings.es.index,
-          _type: "plaintext",
-          _id: hashId(body) }
+        if (!(doc['@timestamp'])) {
+          doc['@timestamp'] = new Date().toISOString()
         }
-        doc = JSON.parse('{"TimeStamp": "' 
-          + new Date().toISOString() 
-          + '", "Message":"' + body.replace(/\n$/, "").replace(/\n/g, " ") 
-          + '"}');
+      } catch (err) {
+      var body = messages[msg].Body;
+      meta = { index: {
+        _index: settings.es.index,
+        _type: "plaintext",
+        _id: hashId(body) }
+      }
+      doc = JSON.parse('{"@timestamp": "' 
+        + new Date().toISOString() 
+        + '", "@message":"' + body.replace(/\n$/, "").replace(/\n/g, " ") 
+        + '"}');
       };
       receipt = { Id: msg.toString(), ReceiptHandle: rcpt };
       docs.push(meta, doc);
