@@ -87,7 +87,7 @@ Server:
 
 **Langolier pulling & indexing messages**:
 <pre>
-langolier.js 
+% node langolier.js 
 Wed Oct 29 2014 23:49:54 GMT+0000 (UTC) [INFO]: Connected to ElasticSearch on 10.0.1.10:9200
 Wed Oct 29 2014 23:49:54 GMT+0000 (UTC) [INFO]: Connected to ElasticSearch on 10.0.1.10:9200
 Wed Oct 29 2014 23:49:54 GMT+0000 (UTC) [INFO]: Connected to ElasticSearch on 10.0.1.10:9200
