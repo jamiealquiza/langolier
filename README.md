@@ -1,52 +1,46 @@
-### Langolier
+Langolier
+========
 
-Is a lightweight, fast node.js queue processor that makes it easy to index arbitrary data into ElasticSearch.
+# Overview
 
-Example use cases would be tracking software package versions across large or multiple environments or high-level visibility into AWS resources (EC2, EBS vols, etc.).
+Is a fast / lightweight SQS queue processor that makes it easy to index arbitrary data into ElasticSearch (e.g. data produced by [Ascender](https://github.com/jamiealquiza/ascender)).
 
-#### Overview
+Point Langolier at an Amazon SQS queue for consumption and an ElasticSearch instance for indexing. A pool of workers performs long-polling, batched retrieval (defaults to AWS SQS's current max of '10') and bulk indexing into ElasticSearch. Messages are only removed from the queue upon successful indexing.
 
-Point Langolier at an Amazon SQS queue for consumption and an ElasticSearch instance for writing. It uses long-polling and batched retrieval (defaults to AWS's current max of 10), with an ability to run a pool of multiple workers. Captured events are dispatched to ElasticSearch bulk indexing while the worker immediately returns to listening. The ElasticSearch indexing function fires off a callback to remove the message from the queue, only upon successful indexing.
+Langolier generates message content hash IDs in order to prevent the same item from being stored twice in ElasticSearch as a result of multiple producer sends or multiple queue delivery scenarios.
 
-Langolier also uses Node's crypto module to generate message content hash IDs in order to prevent the same item from being stored twice in ElasticSearch. This is important if you're using an at-least-once-delivery message queue such as SQS. Crypto rides on top of OpenSSL and exhibits great performance; a Langolier test setup was able to process over 2,400 events/sec. using a single c3.xlarge instance and sha1 hash IDs (default, not yet configurable).
+A Langolier testing setup was able to dequeue/process over 2,400 events/sec. using a single EC2 c3.xlarge instance.
 
-Messages sent to SQS must follow a specific format:
+# Usage
 
+Langolier writes all messages to the configured index ('settings.es.index' - rolling indices pending). It expects messages in one of three formats: plain-text, json and tagged json.
+
+**plain-text**:
+
+Is indexed under the 'plaintext' type. A '@timestamp' field is appended at indexing time. Multi-line messages are converted to single-line.
+
+**json**:
+
+Is indexed under the 'json' type. A '@timestamp' field is appended at indexing time. Json structure is dynamically mapped within ElasticSearch; all key-value pairs become document fields/values.
+
+**tagged json**:
+
+Langolier can take action on json tagged with special keys. Currently, the '@timestamp' and '@type' special keys exist. The '@timestamp' key allows a user-specified timestamp override, rather than using the time of indexing. The '@type' allows the message to be stored in a specific type rather than the automatic 'plaintext' and 'json' types. The remainder json structure is dynamically mapped within ElasticSearch.
+
+For instance, the following would get stored under the 'package-versions' type:
 <pre>
-{ "DataType": "some-type", "Message":  { "TimeStamp": "2014-04-02T13:04:01.578-04:00", "some-key": "some-val" } }
+{ "@type": "package-versions", "versions":  { "some-software": "1.0.3-10", "other-software": "2.0.1-0" } }
 </pre>
 
-This format is used to take advantage of ElasticSearch dynamic mapping and Kibana's filtering / search features, in lieu of requiring any parsing logic (for now). Your data starts with 'some-key' / 'some-val'; many key-value pairs can be included in each message.
-
-Langolier will index the Message object as-is, using 'DataType' as the ElasticSearch document type. Assuming Langolier was configured to write to an index called 'metadata', the example message would translate to the following curl equivalent:
-
+While the following would be indexed under the generic 'json' type:
 <pre>
-curl -XPOST 'http://127.0.0.1:9200/metadata/some-type/' -d " { "TimeStamp": "2014-04-02T13:04:01.578-04:00", "some-key": "some-val" }"
+{ "versions": { "some-software": "1.0.3-10", "other-software": "2.0.1-0" } }
 </pre>
 
-This allows any number of machines to push arbitrary data to a shared queue for organized storage.
 
-#### Watch it go
+### No Op Mode
 
-Manually pushing message to SQS via AWS console:
-![ScreenShot](http://us-east.manta.joyent.com/jalquiza/public/github/langolier-1.png)
-
-Pulled/indexed by Langolier:
-<pre>
-Fri Apr 04 2014 21:21:39 GMT+0000 (UTC) [INFO]: Connected to ElasticSearch on 10.0.1.35:9200
-Fri Apr 04 2014 21:21:54 GMT+0000 (UTC) [INFO]: Listening for events on https://sqs.us-west-2.amazonaws.com/xxx/langolier-xxxxxx
-Fri Apr 04 2014 21:21:54 GMT+0000 (UTC) [INFO]: Wrote 1 items to index 'metadata' in 2ms
-</pre>
-
-Indexed under respective ElasticSearch type:
-![ScreenShot](http://us-east.manta.joyent.com/jalquiza/public/github/langolier-2.png)
-
-Using Kibana to search on dynamically mapped fields:
-![ScreenShot](http://us-east.manta.joyent.com/jalquiza/public/github/langolier-3.png)
-
-#### No Op Mode
-
-Langolier has a '--noop' flag that can be passed in if you want to test connectivity or the performance of a setup. It will set logging to console, disable indexing (or even attempting to connect to an ElasticSearch endpoint) and disable delete receipts from being sent to SQS (meaning messages will not be removed).
+Langolier has a '--noop' flag that can be passed in if you want to test SQS connectivity or dequeue performance of a particular setup. It will set logging to console, disable indexing (or even attempting to connect to an ElasticSearch endpoint) and disable delete receipts from being sent to SQS (meaning messages will not be removed).
 
 <pre>
  % ./langolier.js --noop
@@ -60,22 +54,64 @@ Sat May 31 2014 13:51:40 GMT-0400 (EDT) [INFO]: Events handled, last 5s: 360
 Sat May 31 2014 13:51:45 GMT-0400 (EDT) [INFO]: Events handled, last 5s: 360
 </pre>
 
-#### Pending Updates
+# Example using [Ascender](https://github.com/jamiealquiza/ascender)
+
+**Sending messages into a local Ascender instance**:
+
+Client:
+<pre>
+% echo 'a string' | nc localhost 6030
+Request Received: 9 bytes
+% echo 'a multi                      
+quote> line
+quote> string' | nc localhost 6030
+Request Received: 20 bytes
+% echo '{ "@timestamp": "'$(date +%s)'", "user": "timestamp" }' | nc localhost 6030            
+Request Received: 52 bytes
+% echo '{ "@timestamp": "'$(date +%s)'", "@type": "user-type", "key": "value" }' | nc localhost 6030
+Request Received: 69 bytes
+</pre>
+
+Server:
+<pre>
+% ./ascender
+2014/10/29 11:07:33 Ascender listening on localhost:6030
+2014/10/29 11:07:34 Connected to queue: https://sqs.us-west-2.amazonaws.com/000/langolier-testing
+2014/10/29 11:07:34 Connected to queue: https://sqs.us-west-2.amazonaws.com/000/langolier-testing
+2014/10/29 17:50:13 Last 5s: sent 1 messages | Avg: 0.20 messages/sec. | Send queue length: 0
+2014/10/29 17:50:28 Last 5s: sent 1 messages | Avg: 0.20 messages/sec. | Send queue length: 0
+2014/10/29 17:50:38 Last 5s: sent 1 messages | Avg: 0.20 messages/sec. | Send queue length: 0
+2014/10/29 17:50:43 Last 5s: sent 1 messages | Avg: 0.20 messages/sec. | Send queue length: 0
+</pre>
+
+**Langolier pulling & indexing messages**:
+<pre>
+langolier.js 
+Wed Oct 29 2014 23:49:54 GMT+0000 (UTC) [INFO]: Connected to ElasticSearch on 10.0.1.10:9200
+Wed Oct 29 2014 23:49:54 GMT+0000 (UTC) [INFO]: Connected to ElasticSearch on 10.0.1.10:9200
+Wed Oct 29 2014 23:49:54 GMT+0000 (UTC) [INFO]: Connected to ElasticSearch on 10.0.1.10:9200
+Wed Oct 29 2014 23:49:55 GMT+0000 (UTC) [INFO]: Listening for events on https://sqs.us-west-2.amazonaws.com/000/langolier-testing
+Wed Oct 29 2014 23:49:55 GMT+0000 (UTC) [INFO]: Listening for events on https://sqs.us-west-2.amazonaws.com/000/langolier-testing
+Wed Oct 29 2014 23:49:55 GMT+0000 (UTC) [INFO]: Listening for events on https://sqs.us-west-2.amazonaws.com/000/langolier-testing
+Wed Oct 29 2014 23:50:09 GMT+0000 (UTC) [INFO]: Wrote 1 item(s) to index 'langolier-testing' in 320ms
+Wed Oct 29 2014 23:50:10 GMT+0000 (UTC) [INFO]: Events handled, last 5s: 1
+Wed Oct 29 2014 23:50:23 GMT+0000 (UTC) [INFO]: Wrote 1 item(s) to index 'langolier-testing' in 1ms
+Wed Oct 29 2014 23:50:25 GMT+0000 (UTC) [INFO]: Events handled, last 5s: 1
+Wed Oct 29 2014 23:50:33 GMT+0000 (UTC) [INFO]: Wrote 1 item(s) to index 'langolier-testing' in 6ms
+Wed Oct 29 2014 23:50:35 GMT+0000 (UTC) [INFO]: Events handled, last 5s: 1
+Wed Oct 29 2014 23:50:38 GMT+0000 (UTC) [INFO]: Wrote 1 item(s) to index 'langolier-testing' in 5ms
+</pre>
+
+**Messages viewed in Kibana**:
+
+Notice which type each message was stored under (either automatically or via tagged json override) and plaintext/json to ElasticSearch document mapping.
+
+![ScreenShot](http://us-east.manta.joyent.com/jalquiza/public/github/langolier-testing.png)
+
+# To Do
++ More special json tags
 + Statsd integration
-+ Controls on in-flight transaction group queues
-+ Automatic, exponential throttling based on latency
++ Internal queuing
++ Throttling based on indexing latency
 + Per-message (rather than per batch) delete handling
-+ Additional / modularized inputs. E.g., Redis is done but not yet rolled in.
-+ Multiple inputs / multiple outputs.
-+ Fix settings to handle multiple ElasticSearch indexing nodes.
-+ Client-side plugins used to simplify data collection for common items.
-
-#### FAQ:
-
-Q: Name
-
-A: Yes, it's named after the 90's time-travel horror film with epic graphics. Langolier doesn't care what time it is and will consume anything from anywhere.
-
-Q: *
-
-A: Any concerns are likey the result of an ops person writing code.
++ Fix settings to handle multiple ElasticSearch indexing nodes
