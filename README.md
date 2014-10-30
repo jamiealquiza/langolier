@@ -54,7 +54,7 @@ Sat May 31 2014 13:51:40 GMT-0400 (EDT) [INFO]: Events handled, last 5s: 360
 Sat May 31 2014 13:51:45 GMT-0400 (EDT) [INFO]: Events handled, last 5s: 360
 </pre>
 
-# Example using [Ascender](https://github.com/jamiealquiza/ascender)
+# Example using Langolier + [Ascender](https://github.com/jamiealquiza/ascender)
 
 **Sending messages into a local Ascender instance**:
 
