@@ -78,6 +78,7 @@ Server:
 2014/10/29 11:07:33 Ascender listening on localhost:6030
 2014/10/29 11:07:34 Connected to queue: https://sqs.us-west-2.amazonaws.com/000/langolier-testing
 2014/10/29 11:07:34 Connected to queue: https://sqs.us-west-2.amazonaws.com/000/langolier-testing
+2014/10/29 11:07:34 Connected to queue: https://sqs.us-west-2.amazonaws.com/000/langolier-testing
 2014/10/29 17:50:13 Last 5s: sent 1 messages | Avg: 0.20 messages/sec. | Send queue length: 0
 2014/10/29 17:50:28 Last 5s: sent 1 messages | Avg: 0.20 messages/sec. | Send queue length: 0
 2014/10/29 17:50:38 Last 5s: sent 1 messages | Avg: 0.20 messages/sec. | Send queue length: 0
