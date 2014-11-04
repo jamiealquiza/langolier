@@ -31,14 +31,17 @@ var AWS = require('aws-sdk');
 
 // Debugging opts
 var noop = {};
-var args = process.argv.slice(2);
-var opts = args.filter(function(index) {
-  return index == "--noop"
-});
-if (opts[0] === "--noop") {
+var opts = process.argv.slice(2);
+
+if (opts.indexOf("--noop") !== -1) {
   settings.logConsole = true;
   noop.indexMsg = true;
   noop.clientEs = true;
+} else if (opts.indexOf("--test-output") !== -1) {
+  settings.logConsole = true;
+  noop.clientEs = true;
+  noop.indexMsg = true;
+  noop.printMsg = true;
 }
 
 // --- Master Process --- //
@@ -109,7 +112,7 @@ if (cluster.isMaster) {
   // --- Output: ElasticSearch --- //
 
   // Init
-    if (noop.clientEs === undefined) {
+    if (noop.clientEs !== true) {
       var clientEs = new elasticsearch.Client({
         host: settings.es.host + ':' + settings.es.port,
         apiVersion: settings.es.apiVer
@@ -127,7 +130,7 @@ if (cluster.isMaster) {
 
   // General
   function indexMsg(message, receipts) {
-    if (noop.indexMsg === undefined) {
+    if (noop.indexMsg !== true) {
       clientEs.bulk({
         body: message
       }, function (err, resp) {
@@ -135,7 +138,7 @@ if (cluster.isMaster) {
           writeLog(err, "WARN");
         }
         else {
-          writeLog("Wrote " 
+          writeLog("Wrote "
             + message.length/2
             + " item(s) to index '"
             + settings.es.index
@@ -145,6 +148,10 @@ if (cluster.isMaster) {
         };
       });
     } else {
+      if (noop.printMsg === true) {
+        console.log(message);
+        delSqsMsg(receipts);
+      }
       process.send({ cmd: 'eventsHandled', count: message.length/2 });
     }
   };
@@ -181,7 +188,7 @@ if (cluster.isMaster) {
       var rcpt = messages[msg].ReceiptHandle;
       try {
         var body = JSON.parse(messages[msg].Body);
-	if (body['@type']) {
+	      if (body['@type']) {
           var type = body['@type']
           delete body['@type']
           doc = body
@@ -208,9 +215,9 @@ if (cluster.isMaster) {
         _type: "plaintext",
         _id: hashId(body) }
       }
-      doc = JSON.parse('{"@timestamp": "' 
-        + new Date().toISOString() 
-        + '", "@message":"' + body.replace(/\n$/, "").replace(/\n/g, " ") 
+      doc = JSON.parse('{"@timestamp": "'
+        + new Date().toISOString()
+        + '", "@message":"' + body.replace(/\n$/, "").replace(/\n/g, " ")
         + '"}');
       };
       receipt = { Id: msg.toString(), ReceiptHandle: rcpt };
