@@ -188,7 +188,7 @@ if (cluster.isMaster) {
       var rcpt = messages[msg].ReceiptHandle;
       try {
         var body = JSON.parse(messages[msg].Body);
-	      if (body['@type']) {
+        if (body['@type']) {
           var type = body['@type']
           delete body['@type']
           doc = body
