@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 // The MIT License (MIT)
 //
 // Copyright (c) 2014 Jamie Alquiza
@@ -217,8 +216,8 @@ if (cluster.isMaster) {
       }
       doc = JSON.parse('{"@timestamp": "'
         + new Date().toISOString()
-        + '", "@message":"' + body.replace(/\n$/, "").replace(/\n/g, " ")
         + '"}');
+      doc['@message'] = JSON.stringify(body.replace(/\n/g, " ").replace(/\n$/, "").trim())
       };
       receipt = { Id: msg.toString(), ReceiptHandle: rcpt };
       docs.push(meta, doc);
