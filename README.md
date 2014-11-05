@@ -132,9 +132,9 @@ Notice which type each message was stored under (either automatically or via tag
 ![ScreenShot](http://us-east.manta.joyent.com/jalquiza/public/github/langolier-testing.png)
 
 # To Do
-+ More special json tags
++ Could use some refactoring
++ Additional special json tags
 + Statsd integration
-+ Internal queuing
-+ Throttling based on indexing latency
++ Better internal throttling based on latency or endpoint health
 + Per-message (rather than per batch) delete handling
 + Fix settings to handle multiple ElasticSearch indexing nodes
