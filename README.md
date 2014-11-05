@@ -9,7 +9,7 @@ Point Langolier at an Amazon SQS queue for consumption and an ElasticSearch inst
 
 Langolier generates message content hash IDs in order to prevent the same item from being stored twice in ElasticSearch as a result of multiple producer sends or multiple queue delivery scenarios.
 
-A Langolier testing setup was able to dequeue/process over 2,400 events/sec. using a single EC2 c3.xlarge instance.
+While Langolier is intended for ad-hoc collection jobs, it can scale vertically (across many cores via the node cluster module - see 'settings.workers') to handle sustained levels of throughput: a single EC2 c3.xlarge instance setup is able to dequeue/process roughly 2,400+ events/sec. SQS does impose some connections per IP limits, so it's advisable to scale horizontally if you're exceeding ~12 workers for a given node.
 
 # Usage
 
