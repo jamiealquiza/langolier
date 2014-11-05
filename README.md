@@ -37,10 +37,32 @@ While the following would be indexed under the generic 'json' type:
 { "versions": { "some-software": "1.0.3-10", "other-software": "2.0.1-0" } }
 </pre>
 
+### Test Mode
+
+The '--test-output' mode will pop (and remove) messages from the queue and print the output to console, rather than indexing (it entirely skips opening connections to ElasticSearch). This is used to review how data is being parsed; you can see the exact object structure as it would be fed into ElasticSearch to ensure types or field/value pairs are being formatted as intended.
+
+Feeding data into SQS via [Ascender](https://github.com/jamiealquiza/ascender):
+<pre>
+% echo '{ "isThisJsonGood": "yes!" }' | nc localhost 6030
+Request Received: 29 bytes
+</pre>
+
+Test Mode output:
+<pre>
+% node ./langolier.js --test-output                            
+Tue Nov 04 2014 15:19:55 GMT-0700 (MST) [INFO]: Listening for events on ttps://sqs.us-west-2.amazonaws.com/xxx/langolier
+[ { index: 
+     { _index: 'recon-testing',
+       _type: 'json',
+       _id: '25fd6b8eb5a523ac6ed0c8cf713253f94122fee5' } },
+  { isThisJsonGood: 'yes!',
+    '@timestamp': '2014-11-04T22:20:44.341Z' } ]
+</pre>
+
 
 ### No Op Mode
 
-Langolier has a '--noop' flag that can be passed in if you want to test SQS connectivity or dequeue performance of a particular setup. It will set logging to console, disable indexing (or even attempting to connect to an ElasticSearch endpoint) and disable delete receipts from being sent to SQS (meaning messages will not be removed).
+Langolier has a '--noop' flag that can be passed in if you want to test SQS connectivity or dequeue performance of a particular setup. It will set logging to console, disable indexing (and skips opening connections ElasticSearch) and disable delete receipts from being sent to SQS (meaning messages will not be removed).
 
 <pre>
  % ./langolier.js --noop
