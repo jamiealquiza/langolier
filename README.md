@@ -1,6 +1,8 @@
 Langolier
 ========
 
+Is sort of a place-holder service and being replaced with a larger, more powerful tool.
+
 # Overview
 
 Is a fast / lightweight SQS queue processor that makes it easy to index arbitrary data into ElasticSearch (e.g. data produced by [Ascender](https://github.com/jamiealquiza/ascender)).
