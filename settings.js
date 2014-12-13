@@ -21,4 +21,8 @@ settings.es.host = '127.0.0.1';
 settings.es.port = '9200';
 settings.es.apiVer = '1.1';
 
+// Outpu: Redis
+settings.redis.host = '127.0.0.1';
+settings.redis.port = '6379';
+
 module.exports = settings;

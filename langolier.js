@@ -27,6 +27,7 @@ var crypto = require('crypto');
 var cluster = require('cluster');
 var elasticsearch = require('elasticsearch');
 var AWS = require('aws-sdk');
+var redis = require('redis')
 
 // Debugging opts
 var noop = {};
@@ -41,7 +42,15 @@ if (opts.indexOf("--noop") !== -1) {
   noop.clientEs = true;
   noop.indexMsg = true;
   noop.printMsg = true;
+  noop.delMsg = true;
+} else if (opts.indexOf("--requeue-only") !== -1) {
+  settings.logConsole = true;
+  noop.clientEs = true;
+  noop.indexMsg = true;
+  noop.delMsg = true;
 }
+
+noop.requeue = true;
 
 // --- Master Process --- //
 
@@ -52,18 +61,22 @@ if (cluster.isMaster) {
 
   // Log events indexed on interval
   var eventsHandled = 0;
+  var eventsRequeued = 0;
   setInterval(function() {
     if (eventsHandled > 0) {
-      writeLog("Events handled, last 5s: " + eventsHandled, "INFO");
+      writeLog("Last 5s - Events handled: " + eventsHandled + " Events requeued: " + eventsRequeued, "INFO");
     }
     eventsHandled = 0;
+    eventsRequeued = 0;
   }, 5000);
 
   // Process worker messages
   function messageHandler(msg) {
     if (msg.cmd && msg.cmd == 'eventsHandled') {
       eventsHandled += msg.count;
-    }
+    } else if (msg.cmd && msg.cmd == 'requeued') {
+      eventsRequeued++;
+    };
   }
 
   // Event listener for worker messages
@@ -108,6 +121,27 @@ if (cluster.isMaster) {
     return hash.read()
   }
 
+  // --- Output: Redis --- //
+  clientRedis = redis.createClient(settings.redis.port, settings.redis.host);
+  clientRedis.on("error", function(err) {
+    writeLog("Error connecting to redis", err);
+    noop.requeue = false;
+  });
+  function requeueMsg(message) {
+    if (noop.requeue) {
+      for (var i = 0; i < message.length; i++) {
+        clientRedis.lpush("messages", message[i].index, function (err, res) {
+          if (err) { 
+            writeLog(err, "WARN");
+          } else {
+            process.send({ cmd: 'requeued' });
+          };
+        });
+      };
+    };
+  }
+  
+
   // --- Output: ElasticSearch --- //
 
   // Init
@@ -149,12 +183,13 @@ if (cluster.isMaster) {
     } else {
       if (noop.printMsg === true) {
         console.log(message);
+      };
+      if (noop.delMsg === true) {
         delSqsMsg(receipts);
-      }
+      };
       process.send({ cmd: 'eventsHandled', count: message.length/2 });
     }
   };
-
 
   // --- Input: AWS SQS --- //
 
@@ -180,6 +215,7 @@ if (cluster.isMaster) {
   function parseSqsMsg(messages) {
     var docs = [];
     var receipts = [];
+    var requeueDocs = [];
     var meta = {};
     var doc = {};
     var receipt = {};
@@ -222,8 +258,11 @@ if (cluster.isMaster) {
       receipt = { Id: msg.toString(), ReceiptHandle: rcpt };
       docs.push(meta, doc);
       receipts.push(receipt);
+      // Docs without meta for requeue
+      requeueDocs.push(doc)
     };
-    indexMsg(docs, receipts)
+    indexMsg(docs, receipts);
+    requeueMsg(requeueDocs);
   }
 
   function pollSqs() {
