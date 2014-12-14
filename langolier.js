@@ -20,7 +20,6 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
 var settings = require('./settings.js');
 var fs = require('fs');
 var crypto = require('crypto');
@@ -127,10 +126,11 @@ if (cluster.isMaster) {
     writeLog("Error connecting to redis", err);
     noop.requeue = false;
   });
-  function requeueMsg(message) {
+  function requeueMsg(messages) {
     if (noop.requeue) {
-      for (var i = 0; i < message.length; i++) {
-        clientRedis.lpush("messages", message[i].index, function (err, res) {
+      for (var i = 0; i < messages.length; i++) {
+        var message = JSON.stringify(messages[i])
+        clientRedis.lpush("messages", message, function (err, res) {
           if (err) { 
             writeLog(err, "WARN");
           } else {
