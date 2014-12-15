@@ -259,6 +259,7 @@ if (cluster.isMaster) {
       docs.push(meta, doc);
       receipts.push(receipt);
       // Docs without meta for requeue
+      doc['@type'] = meta['index']['_type']
       requeueDocs.push(doc)
     };
     indexMsg(docs, receipts);
