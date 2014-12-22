@@ -5,7 +5,9 @@
   "main": "langolier.js",
   "dependencies": {
     "aws-sdk": "2.0.x",
-    "elasticsearch": "2.1.x"
+    "elasticsearch": "2.1.x",
+    "redis": "0.12.x",
+    "hiredis": "0.1.x"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

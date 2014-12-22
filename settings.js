@@ -1,7 +1,7 @@
 var settings = {};
 settings.sqs = {};
 settings.es = {};
-
+settings.redis = {};
 
 // General
 settings.workers = 2;
