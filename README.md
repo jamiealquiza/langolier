@@ -1,7 +1,7 @@
 Langolier
 ========
 
-Note: Langolier is sort of a sprawling hack to work out functionality that I'm ultimately building into a more powerful Scala based application.
+Note: Langolier is sort of a sprawling hack to work out functionality that I'm ultimately building into a different, more powerful service.
 
 # Overview
 
